@@ -1,100 +1,105 @@
 # codeprobe
 
-> **Universal Decision Router and Policy Engine for AI Coding Agents** (Antigravity, Claude Code, Codex, Cursor, Aider).
+> **Universal Decision Router, Autonomous Reconnaissance, and Policy Engine for AI Coding Agents** (Antigravity, Claude Code, Codex, Cursor, Aider).
 
 `codeprobe` sits between your coding agent and raw tool execution. Before an LLM performs expensive or risky actions (broad search, deep file reads, complex refactoring, executing arbitrary code), it queries `codeprobe` to receive:
+- **Pre-Flight Query Analyzer (Step 0)**: Evaluates query ambiguity with local Qwen 3B, providing interactive clarification prompts on CLI or structured `NEEDS_CLARIFICATION` contracts over MCP before wasting token budgets.
 - **Optimal Action Strategy**: Recommended actions with priority and rationale.
 - **Guardrails & Prohibited Actions**: Strict constraints (e.g. *do not edit without reproducing error*, *do not modify read-only lockfiles*, *do not guess file paths*).
 - **Pre-Flight Workspace Inventory (`codeprobe files`)**: Zero-token directory and language volume profiling.
-- **Autonomous Behavioral Code Search (`codeprobe investigate`)**: 1-shot 3-tier evidence synthesis (File Leads, Verbatim Declaration Units with line numbers, and Cross-File Relationships).
-- **Model Tier Guidance**: Model routing advice (e.g. `fast_infer` vs `reasoning_heavy`).
+- **Autonomous Behavioral Code Recon (`codeprobe investigate`)**: 1-shot multi-hop evidence synthesis (File Leads, Verbatim AST Declaration Units with exact line numbers, and Cross-File Call Relationships).
+- **Hop-by-Hop Mid-Flight Analyst**: Local LLM reasoning guides multi-hop traversal jumps based on verified `FACT`s and missing `GAP`s in the `EvidenceManager`.
+- **Git Commit-Aware Semantic Cache**: 0ms instant response when querying unchanged repository commits (`git rev-parse HEAD`).
+- **1-Click Patch Applicator (`codeprobe apply`)**: Validates AST syntax, generates automatic backups (`.bak`), provides dry-run diff previews, and supports instant rollback.
 - **Continuous Learning Loop**: Feedback-driven matrix calibration that trains on agent outcomes.
 
 ---
 
 ## 📦 Installation & Setup
 
-### 1. Production Installation (Sử dụng chính thức)
+### 1. Production Installation
 
-Cài đặt thông qua `pip` hoặc `uv`:
+Install via `pip` or `uv`:
 
 ```bash
-# Cài đặt qua pip
+# Install via pip
 pip install codeprobe
 
-# Hoặc cài đặt qua uv tool (khuyến nghị)
+# Or install via uv tool (recommended)
 uv tool install codeprobe
 
-# Nếu bạn đang phát triển CodeProbe thì cài đặt editable mode
-uv tool install --editable /home/quy/Projects/codeprobe --force
+# If you are developing codeprobe locally, install in editable mode
+uv tool install --editable /path/to/codeprobe --force
 ```
 
-#### Cài đặt Agent Skill (Dành cho AI Coding Agents)
+#### Install Agent Skill (For AI Coding Agents)
 
-Cài đặt `SKILL.md` để hướng dẫn AI Agent (Antigravity, Claude Code, Cursor) tự động kích hoạt CodeProbe:
+Install `SKILL.md` to instruct AI Agents (Antigravity, Claude Code, Cursor) to automatically activate CodeProbe:
 
 ```bash
-# Cài đặt cục bộ vào thư mục project hiện tại (.agents/skills/codeprobe/)
+# Install locally in current project workspace (.agents/skills/codeprobe/)
 codeprobe skill
 
-# Hoặc cài đặt toàn cục cho mọi dự án (~/.gemini/config/, ~/.claude/, ~/.agents/)
+# Or install globally across all workspaces (~/.gemini/config/, ~/.claude/, ~/.agents/)
 codeprobe skill --global
 ```
 
-#### Khởi tạo Guardrails & Policy cho dự án:
+#### Initialize Guardrails & Policy for your project:
 
 ```bash
 codeprobe init
 ```
-Lệnh này sẽ tạo `.codeprobe/rules.toml` chứa các quy tắc bảo vệ file bí mật (`.env*`, `*.pem`), file chỉ đọc (`package-lock.json`, `uv.lock`), và giới hạn bán kính sửa đổi (blast radius).
+This generates `.codeprobe/rules.toml` with protections for secret files (`.env*`, `*.pem`), read-only lockfiles (`package-lock.json`, `uv.lock`), and blast radius boundaries.
 
 ---
 
-### 2. Development Setup (Dành cho phát triển mã nguồn CodeProbe)
+### 2. Development Setup
 
-Nếu bạn clone repository để phát triển hoặc đóng góp tính năng mới:
+If you clone the repository to contribute or develop features:
 
 ```bash
 # Clone repository
 git clone https://github.com/dzhng/codeprobe.git
 cd codeprobe
 
-# Cài đặt môi trường ảo và dependencies với uv
+# Install virtual environment and dependencies with uv
 uv sync
 
-# Hoặc cài đặt editable mode
+# Or install in editable mode
 uv pip install -e .
 ```
 
-#### Cài đặt Agent Skill trong môi trường Dev:
+#### Install Agent Skill in Dev Environment:
 
 ```bash
-# Cài skill vào workspace hiện tại
+# Install skill in current workspace
 uv run codeprobe skill
 
-# Cài đặt toàn cục cho hệ thống
+# Install skill globally
 uv run codeprobe skill --global
 ```
 
-#### Chạy Test Suite:
+#### Run Test Suite:
 
 ```bash
-# Chạy toàn bộ 70+ unit tests
+# Run full test suite (135+ tests)
 uv run pytest
 
-# Chạy benchmark ma trận quyết định
+# Run decision matrix benchmark
 uv run codeprobe test-matrix
 ```
 
 ---
 
-## 🤖 Cách hoạt động với AI Coding Agent
+## 🤖 How it Works with AI Coding Agents
 
-Khi cài đặt `codeprobe skill` hoặc cấu hình MCP Server:
-1. **Tự động gọi làm bước đầu tiên (FIRST ACTION RULE)**: Thay vì đoán mò đường dẫn hoặc chạy `grep -rn` quét toàn bộ ổ đĩa tốn hàng trăm ngàn tokens, Agent sẽ gọi `codeprobe_investigate` (MCP) hoặc `codeprobe investigate` (CLI).
-2. **Pre-flight Inventory**: Agent chạy `codeprobe files` để nắm cấu trúc thư mục và kích thước mã nguồn với chi phí **0 token LLM**.
-3. **Tuân thủ Guardrails**: Agent gọi `codeprobe_decide` trước khi refactor hoặc sửa code để kiểm tra các cấm kỵ (`prohibited_actions`).
-4. **Tự động phản hồi (Feedback Loop)**: Sau mỗi lượt điều tra, Agent gọi `codeprobe_feedback` để chấm điểm và cung cấp danh sách file hữu ích / gây nhiễu, giúp CodeProbe tự động huấn luyện lại ma trận trọng số.
+When `codeprobe skill` is installed or the MCP Server is registered:
+1. **FIRST ACTION RULE**: Instead of hallucinating file paths or running `grep -rn` across the entire disk burning hundreds of thousands of tokens, the agent calls `codeprobe_investigate` (MCP) or `codeprobe investigate` (CLI).
+2. **Step 0 Query Clarification**: If a query is too vague (e.g. *"fix this"*, *"check code"*), CodeProbe pauses early and asks targeted clarification questions before consuming traversal budgets.
+3. **Pre-flight Inventory**: The agent runs `codeprobe files` to survey project structure and code volume at **zero LLM token cost**.
+4. **Guardrail Enforcement**: The agent calls `codeprobe_decide` before refactoring or editing to check forbidden actions (`prohibited_actions`).
+5. **1-Click Patch Application**: For code modifications, the agent uses `ReadyToCodePayload` or runs `codeprobe apply` to execute verified changes safely.
+6. **Continuous Feedback Loop**: After each task, the agent calls `codeprobe_feedback` to score findings and submit helpful/unhelpful files, calibrating CodeProbe's retrieval matrix.
 
 ---
 
@@ -130,20 +135,20 @@ for action in decision.recommended_actions:
 
 ### Model Context Protocol (MCP) Server
 
-Kết nối `codeprobe` trực tiếp với Claude Code, Antigravity IDE, Cursor, hoặc Codex:
+Connect `codeprobe` directly with Claude Code, Antigravity IDE, Cursor, or Codex:
 
 ```bash
-# Chạy MCP server qua stdio (mặc định)
+# Run MCP server via stdio transport (default)
 codeprobe serve
 
-# Chạy MCP server qua SSE transport
+# Run MCP server via SSE transport
 codeprobe serve --sse --port 8000
 
-# Chạy REST HTTP server (FastAPI)
+# Run REST HTTP server (FastAPI)
 codeprobe serve --http --port 8000
 ```
 
-#### Cấu hình MCP (`mcp_config.json`):
+#### MCP Client Configuration (`mcp_config.json`):
 
 ```json
 {
@@ -156,14 +161,14 @@ codeprobe serve --http --port 8000
 }
 ```
 
-#### Các công cụ MCP được cung cấp:
-- `codeprobe_files`: Quét thống kê file và dung lượng dự án (Zero-token inventory).
-- `codeprobe_investigate` / `codeprobe_explore`: **1-Shot Autonomous Investigation Engine**. Trích xuất từ khóa, quét mã nguồn, trích xuất AST Declaration Units kèm số dòng, liên kết đồ thị gọi hàm cross-file và loại bỏ false-positives.
-- `codeprobe_decide`: Đánh giá trạng thái và trả về chiến lược, hành động khuyến nghị, model tier và danh sách `prohibited_actions`.
-- `codeprobe_feedback`: Gửi đánh giá và học online để tinh chỉnh trọng số retrieval.
-- `codeprobe_recommend_strategy`: Triage nhanh chiến lược thực thi và tier mô hình.
-- `codeprobe_evaluate_evidence`: Kiểm tra mức độ đầy đủ của bằng chứng (Sufficiency check).
-- `codeprobe_explain_decision`: Giải thích chi tiết xác suất của ma trận quyết định.
+#### Available MCP Tools:
+- `codeprobe_files`: Fast workspace structure and language breakdown (Zero-token inventory).
+- `codeprobe_investigate` / `codeprobe_explore`: **Autonomous Hybrid Investigation Engine**. Extracts keywords, traverses code, parses multi-language AST units with line ranges, links cross-file call graphs, prunes noise, and produces ready-to-code diffs.
+- `codeprobe_decide`: Evaluates agent context and returns execution strategies, recommended actions, model tiers, and `prohibited_actions`.
+- `codeprobe_feedback`: Submits quality scores and helpful file lists to self-calibrate retrieval weights.
+- `codeprobe_recommend_strategy`: Fast triage of execution strategies and model tiers.
+- `codeprobe_evaluate_evidence`: Checks whether gathered evidence meets context sufficiency thresholds.
+- `codeprobe_explain_decision`: Returns detailed probability calculations and decision matrix rationale.
 
 ---
 
@@ -175,26 +180,38 @@ codeprobe files .
 codeprobe files ./src --json
 codeprobe files --exclude "*.min.js" .
 
-# 2. Điều tra hành vi mã nguồn 1-shot
+# 2. Autonomous behavioral code investigation
 codeprobe investigate "Where is user authentication token verified?"
-codeprobe investigate "Kiểm tra tiến độ phase hiện tại trong .planning"
+codeprobe investigate "Compare deploy scripts and main application runner" --mode compare
+codeprobe investigate "Fix SQL injection vulnerability in search endpoint" --mode code
 
-# 3. Định tuyến quyết định và kiểm tra guardrails
+# 3. 1-Click patch application and rollback
+codeprobe apply --dry-run
+codeprobe apply
+codeprobe apply --rollback src/auth/session.py
+
+# 4. Local LLM Server daemon management (Qwen 2.5 Coder 3B)
+codeprobe llm-server status
+codeprobe llm-server start --gpu-layers 16
+codeprobe llm-server restart
+codeprobe llm-server stop
+
+# 5. Decision routing & guardrails check
 codeprobe route "Refactor database query caching"
 
-# 4. Cài đặt Agent Skill
+# 6. Install Agent Skill
 codeprobe skill
 codeprobe skill --global
 codeprobe skill --print
 
-# 5. Khởi tạo và kiểm tra cấu hình guardrails
+# 7. Initialize & inspect guardrail configuration
 codeprobe init
 codeprobe config
 
-# 6. Gửi feedback huấn luyện trọng số
+# 8. Submit feedback for retrieval calibration
 codeprobe feedback "inv_123456" --score 5 --helpful "src/auth.py"
 
-# 7. Chạy benchmark ma trận
+# 9. Run decision matrix benchmark
 codeprobe test-matrix
 ```
 
@@ -204,7 +221,7 @@ codeprobe test-matrix
 
 ```toml
 [guardrails]
-# Files cấm đọc hoặc chỉnh sửa
+# Files forbidden from reading or modifying
 forbidden_files = [
     ".env*",
     "*.pem",
@@ -213,7 +230,7 @@ forbidden_files = [
     "secrets/*",
 ]
 
-# Files chỉ được đọc, không được sửa đổi
+# Read-only files (agents cannot edit or delete)
 read_only_files = [
     "package-lock.json",
     "yarn.lock",
@@ -223,16 +240,16 @@ read_only_files = [
 ]
 
 [policy]
-# Yêu cầu bằng chứng chạy test trước khi cho phép sửa code
+# Require test execution evidence before allowing code modifications
 require_tests_before_edit = true
 
-# Giới hạn số file tối đa trong một đợt chỉnh sửa
+# Maximum number of files permitted in a single modification set
 blast_radius_limit = 5
 
-# Giới hạn số dòng tối đa khi đọc lát cắt file (slice read)
+# Maximum line count when reading file slices
 max_file_slice_lines = 150
 
-# Giới hạn dung lượng đọc duyệt mã nguồn (navigation budget)
+# Maximum navigation byte budget
 navigation_budget_bytes = 256000
 
 [thresholds]
@@ -257,18 +274,21 @@ testing = "standard"
 ┌────────────────────────────────────────────────────────┐
 │      Coding Agents (Antigravity, Claude Code, Cursor)  │
 └───────────────────────────┬────────────────────────────┘
-                            │ DecisionRequest / Investigation
+                            │ DecisionRequest / Investigation Query
 ┌───────────────────────────▼────────────────────────────┐
 │                    codeprobe Engine                    │
 ├────────────────────────────────────────────────────────┤
-│ 1. Pre-flight Inventory & Budgeted Explorer            │
-│ 2. Multi-language AST Declaration Units (Py/TS/Go/Rust)│
-│ 3. Cross-file Relationship Linker & Pruning            │
-│ 4. Laya Probabilistic Decision Router                  │
-│ 5. Guardrails Policy Engine (Secret / Lockfile bounds) │
-│ 6. Online Feedback Calibration Weight Matrix           │
+│ 0. Pre-Flight Query Analyzer (Step 0 Ambiguity Gate)   │
+│ 1. Git Commit-Aware Semantic Cache (0ms Instant Return)│
+│ 2. Pre-flight Inventory & Budgeted Explorer            │
+│ 3. Multi-language AST Units (Python, JS/TS, Go, Rust)  │
+│ 4. Hop-by-Hop Multi-Hop Recon + Mid-Flight Analyst     │
+│ 5. Cross-file Relationship Linker & Noise Pruning      │
+│ 6. Laya Probabilistic Decision Router & Guardrails     │
+│ 7. Ready-to-Code Synthesizer & 1-Click Patch Patcher   │
+│ 8. Online Feedback Calibration Matrix                  │
 └───────────────────────────┬────────────────────────────┘
-                            │ DecisionResponse / 3-Tier Evidence
+                            │ DecisionResponse / ReadyToCodePayload
 ┌───────────────────────────▼────────────────────────────┐
 │      Agent Executes Safe, Grounded & Targeted Action   │
 └────────────────────────────────────────────────────────┘
